@@ -1,0 +1,94 @@
+---
+title: \vspace{-1.8cm} Relationship between transmission type and miles per gallon
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+---
+\vspace{-1cm}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Synopsis
+
+You work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
+
+- “Is an automatic or manual transmission better for MPG?”
+- "Quantify the MPG difference between automatic and manual transmissions" 
+    
+## Exploratory Data Analysis
+
+Data we are going to use for this document comes from the _*mtcars*_ dataset. It comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models). A brief summary of data can be seen on _*Table 1*_ and _*Figure 1*_ of the Appendix.
+
+```{r}
+library(tidyverse)
+library(GGally)
+library(skimr)
+library(corrplot)
+mtcars_dataset <- mtcars
+mtcars_dataset$vs <- as.factor(mtcars_dataset$vs)
+mtcars_dataset$am <- as.factor(mtcars_dataset$am)
+corr_matrix <- cor(select(mtcars, -c(vs, am)))
+```
+## Model selection
+
+Let's start by fitting the simplest model we can regarding the given questions, that would be MPG as a function of transmission`:
+
+```{r}
+model_1 <- lm(formula = mpg~am, data = mtcars_dataset)
+summary(model_1)
+```
+The p-value of the coefficients is below our threshold of 0.05, so there's evidence to conclude that there is some relation between the type of transmission and miles per US gallon a car can achieve. However, the model has a low R-squared and so it appears to have captured little variance, underfitting the data, resulting in low generalization of their results.
+
+Therefore, we're going to increase the number of predictors in out linear model, and test their performance with an ANOVA test. 
+
+To do that, let's select the new features using a correlation matrix. Recall that multicollinearity is a potential problem on regression analysis. Therefore, we're going to fit a second model with features that have low correlation (according to the *Figure 2* of the Appendix). 
+
+```{r}
+model_2 <- update(model_1, mpg~am+wt+qsec)
+anova(model_1,model_2)
+```
+
+The ANOVA test shows as that our second model is significantly better than our first, mode simple model. Let's take a glance to this last model:
+
+```{r}
+summary(model_2)
+```
+Now, our model can explain 83% of the variability, providing a better fit. Also, looking at the plots displayed on _*Figure 3*_ of the Appendix, we can see:
+
+* No distinct pattern in the residual vs fitted plot, thus we can infer the lack of any non-linear relationship.
+* Normal distribution in the QQ plot.
+* No significant outlires in the Residuals vs Leverage plot.
+
+## Conclusion
+
+After fitting and analyzing our model, we are capable of answering the given questions:
+
+- “Is an automatic or manual transmission better for MPG?”
+
+Manual transmission has proven to better while considering miles per gallon consumption. 
+
+- "Quantify the MPG difference between automatic and manual transmissions". 
+
+Manual transmission delivers about 2.9 miles per gallon more than automatic transmission.
+
+\newpage
+
+## Appendix
+```{r}
+skim_without_charts(mtcars_dataset)
+```
+
+```{r, fig.align="center", fig.cap="Pairs plot of dataset",out.width="75%", out.height="85%"}
+ggpairs(mtcars_dataset,mapping = aes(color=am),title = "Figure 1 - Pair plot of dataset")
+```
+
+```{r, fig.align='center',fig.cap="Correlation Matrix",out.width="75%", out.height="85%"}
+corrplot(corr_matrix, type = "upper",tl.col = "black",method="square",tl.srt = 45,diag = FALSE,addgrid.col = NA)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(model_2)
+```
+
